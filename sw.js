@@ -1,5 +1,5 @@
 // Service worker — cache-first for app files.
-const CACHE = 'mask-v1';
+const CACHE = 'mask-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -40,7 +40,6 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
 
-  // Only cache same-origin files; let fonts & other requests pass through.
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
