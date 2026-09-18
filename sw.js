@@ -1,4 +1,3 @@
-// Service worker — cache-first for app files.
 const CACHE = 'mask-v2';
 const ASSETS = [
   './',
