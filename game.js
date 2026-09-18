@@ -117,7 +117,7 @@ function move(dr, dc) {
 
   while (true) {
     const nr = r + dr, nc = c + dc;
-    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+    if (nr < 0 || nr >= S.worldRows || nc < 0 || nc >= COLS) break;
     if (S.grid[nr][nc] === 1) break;
     r = nr; c = nc;
     path.push([r, c]);
@@ -128,7 +128,7 @@ function move(dr, dc) {
     if (hazardAt(pr, pc)) {
       S.player.r = pr; S.player.c = pc;
       S.player.px = offX + (pc + 0.5) * CELL;
-      S.player.py = offY + (pr + 0.5) * CELL;
+      S.player.py = (pr + 0.5) * CELL - S.camY + offY;
       if (S.shield) {
         S.shield = false;
         toast('Shield saved you');
@@ -169,7 +169,7 @@ function move(dr, dc) {
   S.totalCoins += gotCoins * coinMult;
 
   if (S.magnetT > 0) {
-    for (let rr = Math.max(0, r - 2); rr <= Math.min(ROWS - 1, r + 2); rr++) {
+    for (let rr = Math.max(0, r - 2); rr <= Math.min(S.worldRows - 1, r + 2); rr++) {
       for (let cc = Math.max(0, c - 2); cc <= Math.min(COLS - 1, c + 2); cc++) {
         const k = rr + ',' + cc;
         if (S.coinsSet.has(k)) {
@@ -209,6 +209,15 @@ function move(dr, dc) {
 
 let lastT = 0;
 function update(dt) {
+  // Camera follow
+  if (S.mode === 'stage' && S.grid.length) {
+    const worldY = (S.player.r + 0.5) * CELL;
+    const targetCamY = worldY - H * 0.55;
+    const maxCamY = Math.max(0, S.worldRows * CELL - H);
+    const clamped = Math.max(0, Math.min(maxCamY, targetCamY));
+    S.camY += (clamped - S.camY) * 0.15;
+  }
+
   if (S.levelIntroT > 0) S.levelIntroT = Math.max(0, S.levelIntroT - dt);
   if (S.transition > 0) S.transition = Math.max(0, S.transition - dt * 2);
 
