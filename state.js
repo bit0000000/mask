@@ -1,5 +1,6 @@
 const S = {
   screen: 'menu',
+  previousScreen: null,
   level: 1,
   score: 0,
   coins: 0,
@@ -63,7 +64,8 @@ function resize() {
     S.player.px = offX + (S.player.c + 0.5) * CELL;
     S.player.py = offY + (S.player.r + 0.5) * CELL;
   }
-  draw();
+  // Fix #7: guard against resize firing before render.js has loaded
+  if (typeof draw === 'function') draw();
 }
 window.addEventListener('resize', resize);
 
