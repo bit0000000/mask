@@ -11,6 +11,7 @@ const S = {
   mask: localStorage.getItem('mask-skin') || 'classic',
   owned: JSON.parse(localStorage.getItem('mask-owned') || '["classic"]'),
   best: JSON.parse(localStorage.getItem('mask-best') || '{"score":0,"level":1,"arcade":0}'),
+  style: localStorage.getItem('mask-style') || 'yueliang',
   settings: (() => {
     const d = { sound: true, haptics: true, reducedMotion: false, trail: true };
     try {
@@ -29,6 +30,9 @@ const S = {
   coinsSet: new Set(),
   hazards: [],
   darts: [],
+
+  worldRows: ROWS,
+  camY: 0,
 
   lavaActive: false,
   lavaLevel: 0,
@@ -80,7 +84,7 @@ function resize() {
   offY = (H - CELL * ROWS) / 2;
   if (S.grid.length) {
     S.player.px = offX + (S.player.c + 0.5) * CELL;
-    S.player.py = offY + (S.player.r + 0.5) * CELL;
+    S.player.py = (S.player.r + 0.5) * CELL - S.camY + offY;
   }
   if (typeof draw === 'function') draw();
 }
