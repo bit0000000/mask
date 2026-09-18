@@ -134,28 +134,33 @@ function renderMaskMenu() {
   }
 }
 
+// Fix #11: rename 'dots' to 'score' for accuracy
 function renderDeathStats() {
   const el = document.getElementById('deadStats');
   if (!S.deathStats) { el.innerHTML = ''; return; }
   const d = S.deathStats;
   const timeStr = Math.floor(d.time / 60) + ':' + String(Math.floor(d.time % 60)).padStart(2, '0');
   el.innerHTML = `
-    <div class="k">Dots collected</div><div class="v">${d.dots}</div>
+    <div class="k">Score</div><div class="v">${d.score}</div>
     <div class="k">Coins earned</div><div class="v">${d.coins}</div>
     <div class="k">Time played</div><div class="v">${timeStr}</div>
     <div class="k">Best score</div><div class="v">${S.best.score}</div>
   `;
 }
 
+// Fix #3: wire once at init, use onchange so no duplicate listeners
+let settingsWired = false;
 function wireSettings() {
+  if (settingsWired) return;
+  settingsWired = true;
   const ids = { sound: 'setSound', haptics: 'setHaptics', trail: 'setTrail', reducedMotion: 'setMotion' };
   Object.keys(ids).forEach(key => {
     const el = document.getElementById(ids[key]);
     el.checked = S.settings[key];
-    el.addEventListener('change', () => {
+    el.onchange = () => {
       S.settings[key] = el.checked;
       saveSettings();
       if (key === 'sound' && el.checked) initAudio();
-    });
+    };
   });
 }
