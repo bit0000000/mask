@@ -1,4 +1,4 @@
-const CACHE = 'mask-v2';
+const CACHE = 'mask-v5';
 const ASSETS = [
   './',
   './index.html',
