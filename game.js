@@ -355,3 +355,9 @@ genLevel();
 S.running = false;
 renderMaskMenu();
 requestAnimationFrame(loop);
+// ---------- SERVICE WORKER ----------
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
