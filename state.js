@@ -1,7 +1,7 @@
 const S = {
   screen: 'menu',
   previousScreen: null,
-  mode: 'stage',                // 'stage' | 'arcade'
+  mode: 'stage',
 
   level: 1,
   score: 0,
@@ -30,24 +30,18 @@ const S = {
   hazards: [],
   darts: [],
 
-  // lava
   lavaActive: false,
   lavaLevel: 0,
   lavaRise: 0,
   lavaWave: 0,
 
-  // combo / chain
   chain: 0,
   chainBest: 0,
-
-  // boss
   boss: false,
 
-  // arcade
   arcadeHeight: 0,
   arcadeLavaTimer: 0,
 
-  // transition
   transition: 0,
   transitionText: '',
 
