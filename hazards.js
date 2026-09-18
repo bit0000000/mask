@@ -1,4 +1,3 @@
-// Returns true if cell (r,c) currently contains a lethal hazard
 function hazardAt(r, c) {
   for (const h of S.hazards) {
     if (h.type === 'spike') {
@@ -20,7 +19,6 @@ function hazardAt(r, c) {
   return false;
 }
 
-// Advance hazard state each frame
 function updateHazards(dt) {
   const frozen = S.freezeT > 0;
 
@@ -62,26 +60,49 @@ function updateHazards(dt) {
       }
       if (rr === S.player.r && cc === S.player.c) {
         S.darts.splice(i, 1);
-        if (S.shield) { S.shield = false; toast('Shield saved you'); }
-        else { die(); return; }
+        if (S.shield) {
+          S.shield = false;
+          toast('Shield saved you');
+          sfx.shield();
+          vibrate(20);
+          shakeScreen(6);
+        } else {
+          die();
+          return;
+        }
       }
     }
   }
 
-  // Continuous contact check (bats, puffers)
   for (const h of S.hazards) {
     if (h.type === 'bat') {
       if (Math.round(h.r) === S.player.r && Math.round(h.c) === S.player.c) {
-        if (S.shield) { S.shield = false; toast('Shield saved you'); }
-        else { die(); return; }
+        if (S.shield) {
+          S.shield = false;
+          toast('Shield saved you');
+          sfx.shield();
+          vibrate(20);
+          shakeScreen(6);
+        } else {
+          die();
+          return;
+        }
       }
     } else if (h.type === 'puffer') {
       const expanding = Math.sin(h.t / h.period * Math.PI * 2) > 0;
       if (expanding &&
           Math.abs(h.r - S.player.r) <= 1 &&
           Math.abs(h.c - S.player.c) <= 1) {
-        if (S.shield) { S.shield = false; toast('Shield saved you'); }
-        else { die(); return; }
+        if (S.shield) {
+          S.shield = false;
+          toast('Shield saved you');
+          sfx.shield();
+          vibrate(20);
+          shakeScreen(6);
+        } else {
+          die();
+          return;
+        }
       }
     }
   }
