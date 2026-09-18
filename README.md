@@ -13,7 +13,7 @@ Open the live link. No install, no account, no download.
 
 ## Modes
 
-**Stage** — 500 procedurally generated levels. Difficulty rises every level. Every 10th level is a boss: extra coins and rising lava.
+**Stage** — procedurally generated levels. Difficulty rises every level. Every 10th level is a boss: extra coins and rising lava.
 
 **Arcade** — endless vertical climb. Lava chases you from below. Score is height climbed.
 
@@ -30,15 +30,15 @@ Open the live link. No install, no account, no download.
 | 🐍 | Snake | Bursts out of a wall when you cross its row or column |
 | 🌋 | Lava | Rises from below on boss levels and in Arcade mode |
 
-## Power-ups (buy in shop with ◈ coins)
+## Power-ups
+
+Buy in the shop with ◈ coins:
 
 - 🛡 Shield — absorbs one hit
 - ❄ Freeze — hazards stop for 3 seconds
 - 🧲 Magnet — pulls nearby coins toward you for 5 seconds
 
 ## Masks
-
-Unlockable skins with bonuses:
 
 | Mask | Bonus | Cost |
 |------|-------|------|
