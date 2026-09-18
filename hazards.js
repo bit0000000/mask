@@ -29,6 +29,7 @@ function hazardAt(r, c) {
 
 function updateHazards(dt) {
   const frozen = S.freezeT > 0;
+  const WR = S.worldRows;
 
   for (const h of S.hazards) {
     if (h.type === 'hidden') {
@@ -41,7 +42,7 @@ function updateHazards(dt) {
       const nc = h.c + h.dc * h.dir * speed;
       const checkR = Math.round(nr + h.dr * h.dir * 0.5);
       const checkC = Math.round(nc + h.dc * h.dir * 0.5);
-      const blocked = checkR < 0 || checkR >= ROWS || checkC < 0 || checkC >= COLS ||
+      const blocked = checkR < 0 || checkR >= WR || checkC < 0 || checkC >= COLS ||
                       S.grid[checkR][checkC] === 1;
       if (blocked) h.dir *= -1;
       else { h.r = nr; h.c = nc; }
@@ -60,7 +61,7 @@ function updateHazards(dt) {
       const nc = h.c + h.dc * h.dir * speed;
       const checkR = Math.round(nr + h.dr * h.dir * 0.5);
       const checkC = Math.round(nc + h.dc * h.dir * 0.5);
-      const blocked = checkR < 0 || checkR >= ROWS || checkC < 0 || checkC >= COLS ||
+      const blocked = checkR < 0 || checkR >= WR || checkC < 0 || checkC >= COLS ||
                       S.grid[checkR][checkC] === 1;
       if (blocked) h.dir *= -1;
       else { h.r = nr; h.c = nc; }
@@ -85,7 +86,7 @@ function updateHazards(dt) {
           if (S.shield) { S.shield = false; toast('Shield saved you'); sfx.shield(); vibrate(20); shakeScreen(6); }
           else { die(); return; }
         }
-        if (sr < 0 || sr >= ROWS || sc < 0 || sc >= COLS || S.grid[sr][sc] === 1) {
+        if (sr < 0 || sr >= WR || sc < 0 || sc >= COLS || S.grid[sr][sc] === 1) {
           h.state = 'done';
         }
       }
@@ -98,7 +99,7 @@ function updateHazards(dt) {
       d.r += d.dr * d.speed * dt;
       d.c += d.dc * d.speed * dt;
       const rr = Math.round(d.r), cc = Math.round(d.c);
-      if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS || S.grid[rr][cc] === 1) {
+      if (rr < 0 || rr >= WR || cc < 0 || cc >= COLS || S.grid[rr][cc] === 1) {
         S.darts.splice(i, 1);
         continue;
       }
