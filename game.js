@@ -1,4 +1,5 @@
 function startRun(practiceLevel) {
+  S.mode = 'stage';
   S.level = practiceLevel || 1;
   S.score = 0;
   S.coins = 0;
@@ -9,10 +10,7 @@ function startRun(practiceLevel) {
   updateHUD();
   resize();
   genLevel();
-  // Fix #10: longer intro when practising a high level
-  if (practiceLevel && practiceLevel > 1) {
-    S.levelIntroT = 1.8;
-  }
+  if (practiceLevel && practiceLevel > 1) S.levelIntroT = 1.8;
   S.running = true;
   showOverlay(null);
 }
@@ -23,55 +21,64 @@ function levelClear() {
   S.coins += bonus;
   S.totalCoins += bonus;
   updateHUD();
-  // Fix #4: save best on level clear, not just death
   if (S.level > S.best.level) S.best.level = S.level;
   if (S.score > S.best.score) S.best.score = S.score;
   saveBest();
   sfx.level();
   vibrate(15);
-  openShop();
+  S.transition = 1;
+  S.transitionText = 'CLEAR';
+  setTimeout(() => { S.transition = 0; openShop(); }, 400);
 }
 
 function die() {
   S.running = false;
   S.dead = true;
+  S.player.alive = false;
+
+  // shatter effect
+  const pColor = maskColor(S.mask);
+  const shards = [];
+  for (let i = 0; i < 24; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 1 + Math.random() * 3;
+    shards.push({
+      x: S.player.px, y: S.player.py,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      life: 1
+    });
+  }
+  S.player.shatter = shards;
 
   const elapsed = (performance.now() - S.startTime) / 1000;
-  // Fix #11: renamed 'dots' to 'score'
-  S.deathStats = {
-    score: S.score,
-    coins: S.coins,
-    time: elapsed
-  };
+  S.deathStats = { score: S.score, coins: S.coins, time: elapsed };
 
-  const isNewBest = S.score > S.best.score;
-  if (isNewBest) {
-    S.best.score = S.score;
-  }
-  if (S.level > S.best.level) {
-    S.best.level = S.level;
+  let isNewBest = false;
+  if (S.mode === 'arcade') {
+    S.deathStats.height = S.arcadeHeight;
+    if (S.arcadeHeight > (S.best.arcade || 0)) {
+      S.best.arcade = S.arcadeHeight;
+      isNewBest = true;
+    }
+  } else {
+    if (S.score > S.best.score) { S.best.score = S.score; isNewBest = true; }
+    if (S.level > S.best.level) S.best.level = S.level;
   }
   saveBest();
 
-  // Fix #12: cache the colour once, don't re-read CSS on death
-  const danger = cv('--danger');
   shakeScreen(14);
-  flashScreen(danger, 0.5);
+  flashScreen(cv('--danger'), 0.5);
   vibrate([40, 30, 60]);
 
-  const title = document.getElementById('deadTitle');
-  title.textContent = isNewBest ? 'NEW BEST!' : 'You died';
+  document.getElementById('deadTitle').textContent = isNewBest ? 'NEW BEST!' : 'You died';
   document.getElementById('deadMsg').textContent =
-    'Score: ' + S.score + ' · Level ' + S.level;
+    S.mode === 'arcade'
+      ? 'Height ' + S.arcadeHeight + ' · Score ' + S.score
+      : 'Score: ' + S.score + ' · Level ' + S.level;
 
   renderDeathStats();
-  showOverlay('dead');
-
-  if (isNewBest) {
-    sfx.best();
-  } else {
-    sfx.die();
-  }
+  setTimeout(() => showOverlay('dead'), 600);
+  if (isNewBest) sfx.best(); else sfx.die();
 }
 
 function nextLevel() {
@@ -86,7 +93,9 @@ function pauseGame() {
   if (!S.running) return;
   S.running = false;
   document.getElementById('pauseInfo').textContent =
-    'Level ' + S.level + ' · Score ' + S.score + ' · ◈ ' + S.coins;
+    S.mode === 'arcade'
+      ? 'Height ' + S.arcadeHeight + ' · Score ' + S.score
+      : 'Level ' + S.level + ' · Score ' + S.score + ' · ◈ ' + S.coins;
   showOverlay('pause');
 }
 
@@ -97,7 +106,7 @@ function resumeGame() {
 }
 
 function move(dr, dc) {
-  if (!S.running || S.dead) return;
+  if (!S.running || S.dead || !S.player.alive) return;
   if (S.levelIntroT > 0) return;
   if (S.t < S.moveLock) return;
   S.moveLock = S.t + MOVE_DELAY / 1000;
@@ -114,7 +123,6 @@ function move(dr, dc) {
   }
   if (!path.length) return;
 
-  // Fix #1: on shield absorb, stop the player on the hazard cell and return
   for (const [pr, pc] of path) {
     if (hazardAt(pr, pc)) {
       S.player.r = pr; S.player.c = pc;
@@ -127,7 +135,7 @@ function move(dr, dc) {
         vibrate(20);
         shakeScreen(6);
         addTrail(pr, pc);
-        return; // don't continue into another hazard
+        return;
       }
       die(); return;
     }
@@ -140,20 +148,43 @@ function move(dr, dc) {
     if (S.coinsSet.has(k)) { S.coinsSet.delete(k); gotCoins++; }
   }
 
+  // Chain counter: increments on each dot collected in this slide
+  if (got >= 3) {
+    S.chain++;
+    if (S.chain > S.chainBest) S.chainBest = S.chain;
+    popText('×' + got + (S.chain > 1 ? ' · STREAK ' + S.chain : ''), r, c, cv('--danger'));
+  } else if (got === 0 && path.length < 2) {
+    // short bump without collect resets streak
+    S.chain = 0;
+  }
+
   const maskB = MASKS[S.mask].bonus;
   const scoreMult = maskB === 'score2x' ? 2 : 1;
   const coinMult  = maskB === 'coin2x'  ? 2 : 1;
 
-  // Fix #9: combo bonus respects the mask multiplier too
   let comboBonus = 0;
-  if (got >= 3) {
-    comboBonus = got * 2 * scoreMult;
-    popText('×' + got, r, c, cv('--accent'));
-  }
+  if (got >= 3) comboBonus = got * 2 * scoreMult;
 
   S.score += got * scoreMult + comboBonus;
   S.coins += gotCoins * coinMult;
   S.totalCoins += gotCoins * coinMult;
+
+  // Magnet: if active, pull coins from nearby cells
+  if (S.magnetT > 0) {
+    for (let rr = Math.max(0, r-2); rr <= Math.min(ROWS-1, r+2); rr++) {
+      for (let cc = Math.max(0, c-2); cc <= Math.min(COLS-1, c+2); cc++) {
+        const k = rr + ',' + cc;
+        if (S.coinsSet.has(k)) {
+          S.coinsSet.delete(k);
+          S.coins += 1 * coinMult;
+          S.totalCoins += 1 * coinMult;
+          gotCoins++;
+          spawnBurst(rr, cc, cv('--coin'), 4);
+        }
+      }
+    }
+  }
+
   updateHUD();
 
   if (got > 0) {
@@ -172,12 +203,13 @@ function move(dr, dc) {
   S.player.r = r; S.player.c = c;
   S.player.scale = 1.4;
 
-  if (S.dots.size === 0) levelClear();
+  if (S.mode === 'stage' && S.dots.size === 0) levelClear();
 }
 
 let lastT = 0;
 function update(dt) {
   if (S.levelIntroT > 0) S.levelIntroT = Math.max(0, S.levelIntroT - dt);
+  if (S.transition > 0) S.transition = Math.max(0, S.transition - dt * 2);
 
   if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 40);
   if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 2.2);
@@ -186,10 +218,25 @@ function update(dt) {
   updateTrail(dt);
   updatePopups(dt);
 
+  // shatter update
+  if (S.player.shatter) {
+    for (const p of S.player.shatter) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.life -= dt * 1.5;
+    }
+    S.player.shatter = S.player.shatter.filter(p => p.life > 0);
+  }
+
   if (!S.running || S.dead) return;
   if (S.freezeT > 0) S.freezeT = Math.max(0, S.freezeT - dt);
   if (S.magnetT > 0) S.magnetT = Math.max(0, S.magnetT - dt);
+
   updateHazards(dt);
+  updateLava(dt);
+
+  if (S.mode === 'arcade') arcadeUpdate(dt);
 }
 
 function loop(now) {
@@ -204,7 +251,6 @@ function loop(now) {
 
 const themeBtn = document.getElementById('themeBtn');
 function applyTheme() {
-  // Clear the inline fallback styles set by the head script
   document.documentElement.style.background = '';
   document.documentElement.style.color = '';
   const stored = localStorage.getItem('mask-theme');
@@ -222,10 +268,16 @@ themeBtn.addEventListener('click', () => {
 });
 
 // Buttons
-document.getElementById('playBtn').addEventListener('click', () => startRun(1));
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (S.mode === 'arcade') startArcade();
+  else startRun(1);
+});
 document.getElementById('practiceBtn').addEventListener('click', () => startRun(S.best.level));
 document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
-document.getElementById('retryBtn').addEventListener('click', () => startRun(1));
+document.getElementById('retryBtn').addEventListener('click', () => {
+  if (S.mode === 'arcade') startArcade();
+  else startRun(1);
+});
 document.getElementById('menuBtn').addEventListener('click', () => {
   S.running = false; S.dead = false;
   renderMaskMenu();
@@ -241,13 +293,22 @@ document.getElementById('quitBtn').addEventListener('click', () => {
   showOverlay('menu');
 });
 
+// Mode buttons
+document.getElementById('modeStage').addEventListener('click', () => {
+  S.mode = 'stage';
+  renderMaskMenu();
+});
+document.getElementById('modeArcade').addEventListener('click', () => {
+  S.mode = 'arcade';
+  renderMaskMenu();
+});
+
 // Settings
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsClose = document.getElementById('settingsClose');
 const resetProgress = document.getElementById('resetProgress');
 
 settingsBtn.addEventListener('click', () => {
-  // Fix #2: remember where we came from so we can return
   S.previousScreen = S.screen === 'settings' ? S.previousScreen : S.screen;
   if (S.running) pauseGame();
   wireSettings();
@@ -255,11 +316,9 @@ settingsBtn.addEventListener('click', () => {
 });
 
 settingsClose.addEventListener('click', () => {
-  // Fix #2: return to whichever screen we came from
   const back = S.previousScreen;
   S.previousScreen = null;
   if (back === 'playing' || back === 'pause') {
-    // we came from a running game — resume
     S.dead = false;
     resumeGame();
   } else if (back === 'dead') {
@@ -277,11 +336,10 @@ resetProgress.addEventListener('click', () => {
   localStorage.removeItem('mask-best');
   localStorage.removeItem('mask-owned');
   localStorage.removeItem('mask-skin');
-  S.best = { score: 0, level: 1 };
+  S.best = { score: 0, level: 1, arcade: 0 };
   S.owned = ['classic'];
   S.mask = 'classic';
   S.totalCoins = 0;
-  // Fix #8: stop any running game so it doesn't continue with wiped state
   S.running = false;
   S.dead = false;
   S.previousScreen = null;
