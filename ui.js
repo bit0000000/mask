@@ -160,6 +160,35 @@ function renderDeathStats() {
   `;
 }
 
+const STYLES = [
+  { id: 'yueliang', name: 'Yueliang', dot: 'linear-gradient(135deg,#1e3a8a,#4a7bd4)' },
+  { id: 'ashy',     name: 'Ashy',     dot: 'linear-gradient(135deg,#57534e,#b8b0a4)' },
+  { id: 'pastel',   name: 'Pastel',   dot: 'linear-gradient(135deg,#a855f7,#f0a8d8)' },
+  { id: 'mono',     name: 'Mono',     dot: 'linear-gradient(135deg,#333,#ccc)' }
+];
+
+function renderStylePicker() {
+  const grid = document.getElementById('stylePicker');
+  if (!grid) return;
+  grid.innerHTML = '';
+  STYLES.forEach(st => {
+    const active = S.style === st.id;
+    const card = document.createElement('div');
+    card.className = 'style-swatch' + (active ? ' active' : '');
+    card.innerHTML = `
+      <div class="dot" style="background:${st.dot}"></div>
+      <div class="label">${st.name}</div>
+    `;
+    card.addEventListener('click', () => {
+      S.style = st.id;
+      localStorage.setItem('mask-style', st.id);
+      applyStyle();
+      renderStylePicker();
+    });
+    grid.appendChild(card);
+  });
+}
+
 let settingsWired = false;
 function wireSettings() {
   if (settingsWired) return;
@@ -174,6 +203,7 @@ function wireSettings() {
       if (key === 'sound' && el.checked) initAudio();
     };
   });
+  renderStylePicker();
 }
 
 function maybeShowTutorial() {
