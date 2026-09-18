@@ -37,7 +37,6 @@ function die() {
   S.dead = true;
   S.player.alive = false;
 
-  // shatter effect — skipped under reduced motion
   if (!S.settings.reducedMotion) {
     const shards = [];
     for (let i = 0; i < 24; i++) {
@@ -346,14 +345,12 @@ resetProgress.addEventListener('click', () => {
   toast('Progress reset');
 });
 
-// Pause when the tab is hidden
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && S.running && !S.dead) {
     pauseGame();
   }
 });
 
-// ---------- SERVICE WORKER ----------
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
