@@ -1,5 +1,5 @@
 function spawnBurst(r, c, color, count) {
-  if (S.settings.reducedMotion) count = Math.min(count, 4);
+  if (S.settings.reducedMotion) return;
   const cx = offX + (c + 0.5) * CELL;
   const cy = offY + (r + 0.5) * CELL;
   for (let i = 0; i < count; i++) {
@@ -41,7 +41,7 @@ function flashScreen(color, strength) {
 }
 
 function addTrail(r, c) {
-  if (!S.settings.trail) return;
+  if (!S.settings.trail || S.settings.reducedMotion) return;
   S.trail.push({ r, c, life: 1 });
   if (S.trail.length > 30) S.trail.shift();
 }
@@ -54,6 +54,7 @@ function updateTrail(dt) {
 }
 
 function popText(text, r, c, color) {
+  if (S.settings.reducedMotion) return;
   S.popups.push({ text, r, c, life: 1, color: color || cv('--accent') });
 }
 
