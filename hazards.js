@@ -66,7 +66,6 @@ function updateHazards(dt) {
       else { h.r = nr; h.c = nc; }
     } else if (h.type === 'snake') {
       if (h.state === 'idle' && !frozen) {
-        // trigger when player is in same row or col
         if (h.r === S.player.r) {
           h.dir = [0, S.player.c > h.c ? 1 : -1];
           h.state = 'active';
@@ -80,14 +79,12 @@ function updateHazards(dt) {
         }
       } else if (h.state === 'active' && !frozen) {
         h.progress += dt * 6;
-        // kill if hits player
         const sr = Math.round(h.r + h.dir[0] * h.progress);
         const sc = Math.round(h.c + h.dir[1] * h.progress);
         if (sr === S.player.r && sc === S.player.c) {
           if (S.shield) { S.shield = false; toast('Shield saved you'); sfx.shield(); vibrate(20); shakeScreen(6); }
           else { die(); return; }
         }
-        // hit wall = die
         if (sr < 0 || sr >= ROWS || sc < 0 || sc >= COLS || S.grid[sr][sc] === 1) {
           h.state = 'done';
         }
