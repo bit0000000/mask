@@ -6,8 +6,11 @@ function initAudio() {
     actx = new (window.AudioContext || window.webkitAudioContext)();
   } catch (e) { actx = null; }
 }
+
+// Fix #6: initialise audio on any user gesture, including keyboard-only
 document.addEventListener('touchstart', initAudio, { once: true, passive: true });
 document.addEventListener('mousedown', initAudio, { once: true });
+document.addEventListener('keydown', initAudio, { once: true });
 
 function beep(freq, dur, type, vol) {
   if (!S.settings.sound || !actx) return;
@@ -29,9 +32,7 @@ function beep(freq, dur, type, vol) {
 }
 
 const sfx = {
-  tick() {
-    beep(880, 0.08, 'sine', 0.07);
-  },
+  tick() { beep(880, 0.08, 'sine', 0.07); },
   coin() {
     beep(1320, 0.10, 'square', 0.05);
     setTimeout(() => beep(1760, 0.10, 'square', 0.045), 45);
