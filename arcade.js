@@ -10,6 +10,9 @@ function startArcade() {
   S.deathStats = null;
   S.startTime = performance.now();
 
+  S.worldRows = ROWS;
+  S.camY = 0;
+
   S.grid = [];
   for (let r = 0; r < ROWS; r++) {
     S.grid[r] = [];
