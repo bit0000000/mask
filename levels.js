@@ -17,7 +17,6 @@ function genLevel() {
   S.levelIntroT = 0.9;
   S.transition = 0;
 
-  // Try to build a good maze
   let attempts = 0;
   let open = [];
   let start = null;
@@ -25,7 +24,6 @@ function genLevel() {
   while (attempts < 15) {
     attempts++;
     S.grid = fillWithChunks(COLS, ROWS);
-    // find start
     let found = null;
     for (let r = 1; r < ROWS - 1 && !found; r++) {
       for (let c = 1; c < COLS - 1; c++) {
@@ -49,7 +47,6 @@ function genLevel() {
   }
 
   if (!start) {
-    // Fallback: blank grid
     S.grid = [];
     for (let r = 0; r < ROWS; r++) {
       S.grid[r] = [];
@@ -63,7 +60,6 @@ function genLevel() {
       for (let c = 1; c < COLS-1; c++) open.push([r,c]);
   }
 
-  // Shuffle open, reserve safe zone around start
   for (let i = open.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [open[i], open[j]] = [open[j], open[i]];
@@ -84,7 +80,6 @@ function genLevel() {
     return null;
   }
 
-  // Hazards scale with level
   const baseLvl = Math.min(lvl, 30);
   const spikeCount  = Math.min(2 + baseLvl * 2, Math.floor(open.length * 0.28));
   const hiddenCount = lvl >= 3 ? Math.min(1 + Math.floor(lvl / 3), 5) : 0;
@@ -137,14 +132,12 @@ function genLevel() {
   }
   for (let i = 0; i < snakeCount; i++) {
     const p = pickOpen(); if (!p) break;
-    // snake sits until player passes its row or col
     S.hazards.push({
       type: 'snake', r: p[0], c: p[1],
       state: 'idle', progress: 0, dir: null
     });
   }
 
-  // Dots
   const dotChance = Math.max(0.40, 0.62 - lvl * 0.012);
   for (const [r, c] of open) {
     if (S.grid[r][c] === 0 && Math.random() < dotChance) S.dots.add(r + ',' + c);
@@ -156,20 +149,17 @@ function genLevel() {
     }
   }
 
-  // Coins
   const coinCount = 2 + Math.floor(Math.random() * 3) + Math.floor(lvl / 4);
   for (let i = 0; i < coinCount; i++) {
     const p = pickOpen(); if (!p) break;
     S.coinsSet.add(p[0] + ',' + p[1]);
   }
 
-  // Boss levels add extra coins + a lava if it's a boss
   if (isBoss) {
     for (let i = 0; i < 8; i++) {
       const p = pickOpen(); if (!p) break;
       S.coinsSet.add(p[0] + ',' + p[1]);
     }
-    // Lava rises slowly
     initLava(ROWS + 0.5, 0.35);
   } else {
     S.lavaActive = false;
@@ -177,7 +167,6 @@ function genLevel() {
     S.lavaRise = 0;
   }
 
-  // Player
   S.player.r = start[0];
   S.player.c = start[1];
   S.player.px = offX + (start[1] + 0.5) * CELL;
@@ -186,7 +175,6 @@ function genLevel() {
   S.player.alive = true;
   S.player.shatter = null;
 
-  // Mask bonuses
   if (S.inv.shield > 0) { S.inv.shield--; S.shield = true; }
   else S.shield = MASKS[S.mask].bonus === 'shield';
 
