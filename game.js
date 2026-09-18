@@ -267,6 +267,13 @@ themeBtn.addEventListener('click', () => {
   if (S.grid.length) draw();
 });
 
+function applyStyle() {
+  const style = S.style || 'yueliang';
+  document.body.classList.remove('style-ashy', 'style-pastel', 'style-mono');
+  if (style !== 'yueliang') document.body.classList.add('style-' + style);
+  if (S.grid.length) draw();
+}
+
 document.getElementById('playBtn').addEventListener('click', () => {
   if (S.mode === 'arcade') startArcade();
   else startRun(1);
@@ -358,6 +365,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 }
 
 applyTheme();
+applyStyle();
 resize();
 genLevel();
 S.running = false;
