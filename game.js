@@ -9,6 +9,10 @@ function startRun(practiceLevel) {
   updateHUD();
   resize();
   genLevel();
+  // Fix #10: longer intro when practising a high level
+  if (practiceLevel && practiceLevel > 1) {
+    S.levelIntroT = 1.8;
+  }
   S.running = true;
   showOverlay(null);
 }
@@ -19,6 +23,10 @@ function levelClear() {
   S.coins += bonus;
   S.totalCoins += bonus;
   updateHUD();
+  // Fix #4: save best on level clear, not just death
+  if (S.level > S.best.level) S.best.level = S.level;
+  if (S.score > S.best.score) S.best.score = S.score;
+  saveBest();
   sfx.level();
   vibrate(15);
   openShop();
@@ -29,8 +37,9 @@ function die() {
   S.dead = true;
 
   const elapsed = (performance.now() - S.startTime) / 1000;
+  // Fix #11: renamed 'dots' to 'score'
   S.deathStats = {
-    dots: S.score,
+    score: S.score,
     coins: S.coins,
     time: elapsed
   };
@@ -44,8 +53,10 @@ function die() {
   }
   saveBest();
 
+  // Fix #12: cache the colour once, don't re-read CSS on death
+  const danger = cv('--danger');
   shakeScreen(14);
-  flashScreen(cv('--danger'), 0.5);
+  flashScreen(danger, 0.5);
   vibrate([40, 30, 60]);
 
   const title = document.getElementById('deadTitle');
@@ -103,6 +114,7 @@ function move(dr, dc) {
   }
   if (!path.length) return;
 
+  // Fix #1: on shield absorb, stop the player on the hazard cell and return
   for (const [pr, pc] of path) {
     if (hazardAt(pr, pc)) {
       S.player.r = pr; S.player.c = pc;
@@ -114,7 +126,8 @@ function move(dr, dc) {
         sfx.shield();
         vibrate(20);
         shakeScreen(6);
-        break;
+        addTrail(pr, pc);
+        return; // don't continue into another hazard
       }
       die(); return;
     }
@@ -131,10 +144,10 @@ function move(dr, dc) {
   const scoreMult = maskB === 'score2x' ? 2 : 1;
   const coinMult  = maskB === 'coin2x'  ? 2 : 1;
 
-  // Combo bonus
+  // Fix #9: combo bonus respects the mask multiplier too
   let comboBonus = 0;
   if (got >= 3) {
-    comboBonus = got * 2;
+    comboBonus = got * 2 * scoreMult;
     popText('×' + got, r, c, cv('--accent'));
   }
 
@@ -154,7 +167,6 @@ function move(dr, dc) {
     toast('+' + (gotCoins * coinMult) + ' ◈');
   }
 
-  // Trail: add every cell along path
   for (const [pr, pc] of path) addTrail(pr, pc);
 
   S.player.r = r; S.player.c = c;
@@ -192,6 +204,9 @@ function loop(now) {
 
 const themeBtn = document.getElementById('themeBtn');
 function applyTheme() {
+  // Clear the inline fallback styles set by the head script
+  document.documentElement.style.background = '';
+  document.documentElement.style.color = '';
   const stored = localStorage.getItem('mask-theme');
   const isDark = stored ? stored === 'dark' : true;
   document.body.classList.toggle('dark', isDark);
@@ -232,14 +247,31 @@ const settingsClose = document.getElementById('settingsClose');
 const resetProgress = document.getElementById('resetProgress');
 
 settingsBtn.addEventListener('click', () => {
+  // Fix #2: remember where we came from so we can return
+  S.previousScreen = S.screen === 'settings' ? S.previousScreen : S.screen;
   if (S.running) pauseGame();
   wireSettings();
   showOverlay('settings');
 });
+
 settingsClose.addEventListener('click', () => {
-  if (S.dead) showOverlay('dead');
-  else if (S.screen === 'settings' && !S.running) showOverlay('menu');
+  // Fix #2: return to whichever screen we came from
+  const back = S.previousScreen;
+  S.previousScreen = null;
+  if (back === 'playing' || back === 'pause') {
+    // we came from a running game — resume
+    S.dead = false;
+    resumeGame();
+  } else if (back === 'dead') {
+    showOverlay('dead');
+  } else if (back === 'shop') {
+    showOverlay('shop');
+  } else {
+    renderMaskMenu();
+    showOverlay('menu');
+  }
 });
+
 resetProgress.addEventListener('click', () => {
   if (!confirm('Reset all progress? Coins, masks, and best score will be cleared.')) return;
   localStorage.removeItem('mask-best');
@@ -249,8 +281,13 @@ resetProgress.addEventListener('click', () => {
   S.owned = ['classic'];
   S.mask = 'classic';
   S.totalCoins = 0;
-  toast('Progress reset');
+  // Fix #8: stop any running game so it doesn't continue with wiped state
+  S.running = false;
+  S.dead = false;
+  S.previousScreen = null;
   renderMaskMenu();
+  showOverlay('menu');
+  toast('Progress reset');
 });
 
 // Init
