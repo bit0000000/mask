@@ -1,5 +1,4 @@
 // Arcade mode: endless vertical climb with rising lava.
-// World shifts down when player reaches the top rows.
 
 function startArcade() {
   S.mode = 'arcade';
@@ -13,7 +12,7 @@ function startArcade() {
   S.deathStats = null;
   S.startTime = performance.now();
 
-  // Build a tall starting world
+  // Build starting grid
   S.grid = [];
   for (let r = 0; r < ROWS; r++) {
     S.grid[r] = [];
@@ -21,9 +20,9 @@ function startArcade() {
       S.grid[r][c] = (c === 0 || c === COLS - 1) ? 1 : 0;
     }
   }
-  // Add some starting walls
+  // Scatter some walls (avoid bottom rows where player starts)
   for (let i = 0; i < 15; i++) {
-    const r = 2 + Math.floor(Math.random() * (ROWS - 4));
+    const r = 2 + Math.floor(Math.random() * (ROWS - 5));
     const c = 1 + Math.floor(Math.random() * (COLS - 2));
     S.grid[r][c] = 1;
   }
@@ -35,11 +34,15 @@ function startArcade() {
   S.particles = [];
   S.trail = [];
   S.popups = [];
+  S.shake = 0;
+  S.flash = 0;
+  S.chain = 0;
 
-  // Start player at bottom area
+  // Start player at bottom area, guarantee open cell in that row
   S.player.r = ROWS - 3;
-  S.player.c = Math.floor(COLS / 2);
-  while (S.grid[S.player.r][S.player.c] === 1) S.player.c = Math.max(1, S.player.c - 1);
+  const midC = Math.floor(COLS / 2);
+  S.grid[S.player.r][midC] = 0;
+  S.player.c = midC;
   S.player.px = offX + (S.player.c + 0.5) * CELL;
   S.player.py = offY + (S.player.r + 0.5) * CELL;
   S.player.scale = 1;
@@ -49,16 +52,35 @@ function startArcade() {
   // Lava starts below the player
   initLava(ROWS - 1 + 0.5, 0.28);
 
-  // Fill dots above
+  // Fill dots above player
   for (let r = 0; r < ROWS - 3; r++) {
     for (let c = 1; c < COLS - 1; c++) {
       if (S.grid[r][c] === 0 && Math.random() < 0.4) S.dots.add(r + ',' + c);
     }
   }
 
+  // Starting coins
+  for (let i = 0; i < 3; i++) {
+    for (let tries = 0; tries < 20; tries++) {
+      const r = 2 + Math.floor(Math.random() * (ROWS - 6));
+      const c = 1 + Math.floor(Math.random() * (COLS - 2));
+      if (S.grid[r][c] === 0) {
+        S.coinsSet.add(r + ',' + c);
+        break;
+      }
+    }
+  }
+
   S.levelIntroT = 1.2;
   S.transitionText = 'ARCADE';
   S.transition = 1.2;
+
+  // Mask bonuses
+  if (S.inv.shield > 0) { S.inv.shield--; S.shield = true; }
+  else S.shield = MASKS[S.mask].bonus === 'shield';
+  S.freezeT = 0;
+  S.magnetT = 0;
+
   updateHUD();
   showOverlay(null);
   S.running = true;
@@ -67,7 +89,7 @@ function startArcade() {
 function arcadeUpdate(dt) {
   if (!S.running || S.dead) return;
 
-  // Track max height climbed (higher = lower row index)
+  // Track max height climbed (lower row index = higher)
   const climbed = (ROWS - 3) - S.player.r;
   if (climbed > S.arcadeHeight) {
     const gain = climbed - S.arcadeHeight;
@@ -76,39 +98,55 @@ function arcadeUpdate(dt) {
     updateHUD();
   }
 
-  // When player reaches top rows, shift world down and spawn new rows on top
-  if (S.player.r <= 3) {
+  // Shift world down when player reaches top rows.
+  // Bounded loop in case of unexpected state.
+  let safety = 0;
+  while (S.player.r <= 3 && safety < 8) {
     shiftWorldDown();
+    safety++;
   }
 }
 
 function shiftWorldDown() {
-  // Shift all rows down by 1. New row at top.
-  const newGrid = [];
-  newGrid[0] = new Array(COLS).fill(1);
-  newGrid[0][0] = 1;
-  newGrid[0][COLS-1] = 1;
+  // Build new top row
+  const newTop = new Array(COLS).fill(0);
+  newTop[0] = 1;
+  newTop[COLS - 1] = 1;
   for (let c = 1; c < COLS - 1; c++) {
-    newGrid[0][c] = Math.random() < 0.25 ? 1 : 0;
+    newTop[c] = Math.random() < 0.25 ? 1 : 0;
   }
+  // Guarantee at least one open cell
+  let hasOpen = false;
+  for (let c = 1; c < COLS - 1; c++) if (newTop[c] === 0) hasOpen = true;
+  if (!hasOpen) newTop[1 + Math.floor(Math.random() * (COLS - 2))] = 0;
+
+  // Shift grid: newTop on top, old rows 0..ROWS-2 shift down
+  const newGrid = [newTop];
   for (let r = 0; r < ROWS - 1; r++) {
-    newGrid[r + 1] = S.grid[r].slice();
+    newGrid.push(S.grid[r].slice());
   }
   S.grid = newGrid;
 
-  // Shift player, hazards, dots, coins
+  // Shift player
   S.player.r += 1;
   S.player.py += CELL;
 
+  // Shift lava down so it keeps pace with the world
+  S.lavaLevel += 1;
+
+  // Shift hazards, keep only valid rows
   S.hazards = S.hazards.filter(h => {
     h.r += 1;
-    return h.r < ROWS;
+    return h.r >= 1 && h.r < ROWS;
   });
+
+  // Shift darts
   S.darts = S.darts.filter(d => {
     d.r += 1;
     return d.r < ROWS;
   });
 
+  // Shift dots
   const newDots = new Set();
   for (const k of S.dots) {
     const [r, c] = k.split(',').map(Number);
@@ -116,6 +154,7 @@ function shiftWorldDown() {
   }
   S.dots = newDots;
 
+  // Shift coins
   const newCoins = new Set();
   for (const k of S.coinsSet) {
     const [r, c] = k.split(',').map(Number);
@@ -123,35 +162,13 @@ function shiftWorldDown() {
   }
   S.coinsSet = newCoins;
 
-  S.trail = S.trail.map(t => ({ ...t, r: t.r + 1 }));
+  // Shift trail, drop rows that fell off the bottom
+  S.trail = S.trail
+    .map(t => ({ ...t, r: t.r + 1 }))
+    .filter(t => t.r < ROWS);
 
-  // Spawn new content in the top rows
+  // Spawn content in new top row
   const diff = Math.floor(S.arcadeHeight / 8);
   for (let c = 1; c < COLS - 1; c++) {
     if (S.grid[1][c] === 0) {
-      if (Math.random() < 0.5) S.dots.add('1,' + c);
-      if (Math.random() < 0.08) S.coinsSet.add('1,' + c);
-      // hazards grow with depth
-      if (diff >= 1 && Math.random() < 0.04 * diff) {
-        S.hazards.push({ type: 'spike', r: 1, c });
-      } else if (diff >= 3 && Math.random() < 0.02 * diff) {
-        const horiz = Math.random() < 0.5;
-        S.hazards.push({
-          type: 'bat', r: 1, c,
-          dr: horiz ? 0 : 1, dc: horiz ? 1 : 0,
-          dir: 1, speed: 1.6 + diff * 0.15
-        });
-      }
-    }
-  }
-
-  // Speed up lava over time
-  S.lavaRise = 0.28 + S.arcadeHeight * 0.005;
-}
-
-function arcadeDeath() {
-  const isNewBest = S.arcadeHeight > (S.best.arcade || 0);
-  if (isNewBest) S.best.arcade = S.arcadeHeight;
-  saveBest();
-  return isNewBest;
-}
+      if (Math.random() < 0.5)
