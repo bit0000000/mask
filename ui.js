@@ -18,10 +18,11 @@ function toast(msg) {
 }
 
 const overlays = {
-  menu:  document.getElementById('menuOverlay'),
-  shop:  document.getElementById('shopOverlay'),
-  dead:  document.getElementById('deadOverlay'),
-  pause: document.getElementById('pauseOverlay')
+  menu: document.getElementById('menuOverlay'),
+  shop: document.getElementById('shopOverlay'),
+  dead: document.getElementById('deadOverlay'),
+  pause: document.getElementById('pauseOverlay'),
+  settings: document.getElementById('settingsOverlay')
 };
 
 function showOverlay(name) {
@@ -30,7 +31,6 @@ function showOverlay(name) {
   S.screen = name || 'playing';
 }
 
-// ---------- SHOP ----------
 const SHOP_ITEMS = [
   { key: 'shield', icon: '🛡', name: 'Shield', desc: 'Absorbs one hit next level', cost: 15 },
   { key: 'freeze', icon: '❄', name: 'Freeze', desc: 'Freeze hazards for 3s',     cost: 12 },
@@ -58,6 +58,7 @@ function openShop() {
       if (S.coins < it.cost) { toast('Not enough ◈'); return; }
       S.coins -= it.cost;
       S.inv[it.key]++;
+      sfx.buy();
       updateHUD();
       toast('Bought ' + it.name);
       openShop();
@@ -86,6 +87,7 @@ function openShop() {
       S.coins -= m.cost;
       S.owned.push(id);
       localStorage.setItem('mask-owned', JSON.stringify(S.owned));
+      sfx.buy();
       updateHUD();
       toast('Unlocked ' + m.name);
       openShop();
@@ -95,11 +97,12 @@ function openShop() {
   showOverlay('shop');
 }
 
-// ---------- MASK MENU ----------
 function renderMaskMenu() {
   const grid = document.getElementById('maskGrid');
   grid.innerHTML = '';
   document.getElementById('menuCoins').textContent = S.totalCoins;
+  document.getElementById('menuBest').textContent =
+    'BEST ' + S.best.score + ' · LEVEL ' + S.best.level;
 
   MASK_ORDER.forEach(id => {
     const m = MASKS[id];
@@ -120,5 +123,39 @@ function renderMaskMenu() {
       renderMaskMenu();
     });
     grid.appendChild(card);
+  });
+
+  const pracBtn = document.getElementById('practiceBtn');
+  if (S.best.level > 1) {
+    pracBtn.style.display = '';
+    pracBtn.textContent = 'PRACTICE FROM LEVEL ' + S.best.level;
+  } else {
+    pracBtn.style.display = 'none';
+  }
+}
+
+function renderDeathStats() {
+  const el = document.getElementById('deadStats');
+  if (!S.deathStats) { el.innerHTML = ''; return; }
+  const d = S.deathStats;
+  const timeStr = Math.floor(d.time / 60) + ':' + String(Math.floor(d.time % 60)).padStart(2, '0');
+  el.innerHTML = `
+    <div class="k">Dots collected</div><div class="v">${d.dots}</div>
+    <div class="k">Coins earned</div><div class="v">${d.coins}</div>
+    <div class="k">Time played</div><div class="v">${timeStr}</div>
+    <div class="k">Best score</div><div class="v">${S.best.score}</div>
+  `;
+}
+
+function wireSettings() {
+  const ids = { sound: 'setSound', haptics: 'setHaptics', trail: 'setTrail', reducedMotion: 'setMotion' };
+  Object.keys(ids).forEach(key => {
+    const el = document.getElementById(ids[key]);
+    el.checked = S.settings[key];
+    el.addEventListener('change', () => {
+      S.settings[key] = el.checked;
+      saveSettings();
+      if (key === 'sound' && el.checked) initAudio();
+    });
   });
 }
