@@ -22,7 +22,18 @@ function draw() {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  if (!S.grid.length) return;
+  ctx.save();
+  if (S.shake > 0.5) {
+    ctx.translate(
+      (Math.random() - 0.5) * S.shake,
+      (Math.random() - 0.5) * S.shake
+    );
+  }
+
+  if (!S.grid.length) {
+    ctx.restore();
+    return;
+  }
 
   // Walls + grid
   for (let r = 0; r < ROWS; r++) {
@@ -43,6 +54,18 @@ function draw() {
       }
     }
   }
+
+  // Trail
+  for (const t of S.trail) {
+    const cx = offX + (t.c + 0.5) * CELL;
+    const cy = offY + (t.r + 0.5) * CELL;
+    ctx.globalAlpha = t.life * 0.35;
+    ctx.fillStyle = maskColor(S.mask);
+    ctx.beginPath();
+    ctx.arc(cx, cy, CELL * 0.22 * t.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   // Dots
   const pulse = 0.85 + Math.sin(S.t * 4) * 0.15;
@@ -94,7 +117,6 @@ function draw() {
     else if (h.type === 'dart') drawDartTrap(h, cx, cy, dart);
   }
 
-  // Darts (projectiles)
   for (const d of S.darts) {
     const cx = offX + (d.c + 0.5) * CELL, cy = offY + (d.r + 0.5) * CELL;
     drawDartProjectile(cx, cy, dart);
@@ -136,13 +158,54 @@ function draw() {
   drawSprite(SPR_PLAYER, S.player.px, S.player.py,
              CELL * 0.85 * S.player.scale, pColor);
 
+  // Particles
+  for (const p of S.particles) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Popups
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const pop of S.popups) {
+    const cx = offX + (pop.c + 0.5) * CELL;
+    const cy = offY + (pop.r + 0.5) * CELL - (1 - pop.life) * CELL * 1.4;
+    ctx.globalAlpha = Math.max(0, pop.life);
+    ctx.font = 'bold 18px Montserrat, sans-serif';
+    ctx.fillStyle = pop.color;
+    ctx.fillText(pop.text, cx, cy);
+  }
+  ctx.globalAlpha = 1;
+
+  // Level intro
+  if (S.levelIntroT > 0) {
+    const a = Math.min(1, S.levelIntroT * 1.5);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = hexA(accent, 0.85);
+    ctx.font = 'bold 34px Montserrat, sans-serif';
+    ctx.fillText('LEVEL ' + S.level, W / 2, H / 2);
+    ctx.globalAlpha = 1;
+  }
+
   if (S.freezeT > 0) {
     ctx.fillStyle = hexA('#22d3ee', 0.10);
     ctx.fillRect(0, 0, W, H);
   }
-}
 
-// --- individual hazard drawings ---
+  ctx.restore();
+
+  // Screen flash (outside shake)
+  if (S.flash > 0.01) {
+    ctx.globalAlpha = Math.min(1, S.flash);
+    ctx.fillStyle = S.flashColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+}
 
 function drawSpike(cx, cy, color) {
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, CELL * 0.6);
