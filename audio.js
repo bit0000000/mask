@@ -7,7 +7,6 @@ function initAudio() {
   } catch (e) { actx = null; }
 }
 
-// Fix #6: initialise audio on any user gesture, including keyboard-only
 document.addEventListener('touchstart', initAudio, { once: true, passive: true });
 document.addEventListener('mousedown', initAudio, { once: true });
 document.addEventListener('keydown', initAudio, { once: true });
