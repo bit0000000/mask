@@ -29,7 +29,6 @@ function draw() {
 
   if (!S.grid.length) { ctx.restore(); return; }
 
-  // Walls
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const x = offX + c*CELL, y = offY + r*CELL;
@@ -49,10 +48,8 @@ function draw() {
     }
   }
 
-  // Lava (under everything that isn't a wall)
   drawLava();
 
-  // Trail
   for (const t of S.trail) {
     const cx = offX + (t.c+0.5)*CELL, cy = offY + (t.r+0.5)*CELL;
     ctx.globalAlpha = t.life * 0.35;
@@ -63,7 +60,6 @@ function draw() {
   }
   ctx.globalAlpha = S.transition > 0 ? Math.min(1, S.transition) : 1;
 
-  // Dots
   const pulse = 0.85 + Math.sin(S.t*4)*0.15;
   for (const key of S.dots) {
     const [r, c] = key.split(',').map(Number);
@@ -78,7 +74,6 @@ function draw() {
     ctx.fillRect(cx-s/2, cy-s/2, s, s);
   }
 
-  // Coins
   for (const key of S.coinsSet) {
     const [r, c] = key.split(',').map(Number);
     const cx = offX + (c+0.5)*CELL, cy = offY + (r+0.5)*CELL;
@@ -97,7 +92,6 @@ function draw() {
     ctx.fillRect(cx-s*0.3, cy-s*0.6, s*0.5, s*0.5);
   }
 
-  // Hazards
   for (const h of S.hazards) {
     const cx = offX + (h.c+0.5)*CELL, cy = offY + (h.r+0.5)*CELL;
     if (h.type === 'spike') drawSpike(cx, cy, danger);
@@ -118,7 +112,6 @@ function draw() {
     drawDartProjectile(cx, cy, dart);
   }
 
-  // Player
   if (S.player.shatter) {
     drawShatter();
   } else {
@@ -152,7 +145,6 @@ function draw() {
     drawSprite(SPR_PLAYER, S.player.px, S.player.py, CELL*0.85*S.player.scale, pColor);
   }
 
-  // Particles
   for (const p of S.particles) {
     ctx.globalAlpha = Math.max(0, p.life);
     ctx.fillStyle = p.color;
@@ -160,7 +152,6 @@ function draw() {
   }
   ctx.globalAlpha = 1;
 
-  // Popups
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const pop of S.popups) {
@@ -173,7 +164,6 @@ function draw() {
   }
   ctx.globalAlpha = 1;
 
-  // Level intro
   if (S.levelIntroT > 0) {
     const a = Math.min(1, S.levelIntroT * 1.5);
     ctx.globalAlpha = a;
@@ -294,7 +284,6 @@ function drawDartProjectile(cx, cy, color) {
 }
 
 function drawSaw(h, cx, cy, color) {
-  // rotating blade
   const r = CELL*0.38;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, CELL*0.55);
   g.addColorStop(0, hexA(color, 0.35));
@@ -302,7 +291,6 @@ function drawSaw(h, cx, cy, color) {
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(cx, cy, CELL*0.55, 0, Math.PI*2); ctx.fill();
 
-  // teeth
   const teeth = 8;
   ctx.fillStyle = color;
   for (let i = 0; i < teeth; i++) {
@@ -315,13 +303,11 @@ function drawSaw(h, cx, cy, color) {
     ctx.lineTo(tx + Math.cos(a - 0.4) * r * 0.4, ty + Math.sin(a - 0.4) * r * 0.4);
     ctx.closePath(); ctx.fill();
   }
-  // hub
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(cx, cy, r*0.35, 0, Math.PI*2); ctx.fill();
 }
 
 function drawSnake(h, cx, cy, color) {
-  // base at anchor
   const s = CELL*0.3;
   ctx.fillStyle = hexA(color, 0.3);
   ctx.beginPath(); ctx.arc(cx, cy, CELL*0.5, 0, Math.PI*2); ctx.fill();
@@ -329,7 +315,6 @@ function drawSnake(h, cx, cy, color) {
   ctx.fillRect(cx-s, cy-s, s*2, s*2);
 
   if (h.state === 'active' && h.progress > 0) {
-    // trail
     const endR = h.r + h.dir[0] * h.progress;
     const endC = h.c + h.dir[1] * h.progress;
     ctx.strokeStyle = color;
@@ -339,7 +324,6 @@ function drawSnake(h, cx, cy, color) {
     ctx.moveTo(cx, cy);
     ctx.lineTo(offX + (endC+0.5)*CELL, offY + (endR+0.5)*CELL);
     ctx.stroke();
-    // head
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(offX + (endC+0.5)*CELL, offY + (endR+0.5)*CELL, CELL*0.22, 0, Math.PI*2);
