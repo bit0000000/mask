@@ -1,6 +1,5 @@
 const scoreEl = document.getElementById('score');
 const coinsEl = document.getElementById('coins');
-const levelEl = document.getElementById('level') || document.getElementById('lvlDisplay');
 const chainEl = document.getElementById('chainDisplay');
 const lvlDisplayEl = document.getElementById('lvlDisplay');
 
@@ -140,7 +139,6 @@ function renderMaskMenu() {
     pracBtn.style.display = 'none';
   }
 
-  // mode buttons
   document.getElementById('modeStage').classList.toggle('active', S.mode === 'stage');
   document.getElementById('modeArcade').classList.toggle('active', S.mode === 'arcade');
 }
@@ -149,7 +147,7 @@ function renderDeathStats() {
   const el = document.getElementById('deadStats');
   if (!S.deathStats) { el.innerHTML = ''; return; }
   const d = S.deathStats;
-  const timeStr = Math.floor(d.time/60) + ':' + String(Math.floor(d.time%60)).padStart(2,'0');
+  const timeStr = Math.floor(d.time / 60) + ':' + String(Math.floor(d.time % 60)).padStart(2, '0');
   const heightRow = S.mode === 'arcade'
     ? `<div class="k">Height</div><div class="v">${d.height || 0}</div>`
     : '';
@@ -176,4 +174,45 @@ function wireSettings() {
       if (key === 'sound' && el.checked) initAudio();
     };
   });
+}
+
+function maybeShowTutorial() {
+  if (localStorage.getItem('mask-tutorial-seen') === 'true') return;
+  const wrap = document.querySelector('.game-wrap');
+  if (!wrap || document.getElementById('tutorialHint')) return;
+
+  const el = document.createElement('div');
+  el.id = 'tutorialHint';
+  el.style.cssText = `
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    pointer-events:none;z-index:15;animation:tutFade 2.5s ease forwards;
+  `;
+  el.innerHTML = `
+    <div style="
+      background:rgba(10,18,38,.85);color:#fff;padding:14px 22px;border-radius:16px;
+      font-size:.9rem;font-weight:600;letter-spacing:.03em;text-align:center;
+      box-shadow:0 8px 30px rgba(0,0,0,.35);backdrop-filter:blur(4px);
+    ">
+      <div style="font-size:1.3rem;margin-bottom:4px">↕ ↔</div>
+      Swipe to slide
+    </div>
+  `;
+  wrap.appendChild(el);
+
+  if (!document.getElementById('tutStyle')) {
+    const s = document.createElement('style');
+    s.id = 'tutStyle';
+    s.textContent = `
+      @keyframes tutFade {
+        0%   { opacity:0; transform:translateY(8px); }
+        15%  { opacity:1; transform:translateY(0); }
+        75%  { opacity:1; transform:translateY(0); }
+        100% { opacity:0; transform:translateY(-6px); }
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  localStorage.setItem('mask-tutorial-seen', 'true');
+  setTimeout(() => el.remove(), 2600);
 }
