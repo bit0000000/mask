@@ -1,13 +1,10 @@
-// Grid & timing
 const COLS = 8, ROWS = 12;
 const MOVE_DELAY = 70;
 
-// Read a CSS variable from body
 function cv(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 
-// Convert #rrggbb to rgba()
 function hexA(hex, a) {
   hex = hex.replace('#', '');
   if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
@@ -17,7 +14,6 @@ function hexA(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-// 8x8 pixel sprites — '#' is a filled pixel
 const SPR_PLAYER = [
   "........",
   ".######.",
