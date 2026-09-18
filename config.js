@@ -1,4 +1,6 @@
-const COLS = 8, ROWS = 12;
+const COLS = 8;
+const ROWS = 12;
+const WORLD_ROWS = 24;
 const MOVE_DELAY = 70;
 
 function cv(name) {
