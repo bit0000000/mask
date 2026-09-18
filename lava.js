@@ -28,7 +28,9 @@ function drawLava() {
   if (!S.lavaActive) return;
 
   const lava = cv('--lava');
-  const yTop = offY + S.lavaLevel * CELL;
+  const yTop = S.lavaLevel * CELL - S.camY + offY;
+
+  if (yTop > H) return;
 
   const grad = ctx.createLinearGradient(0, yTop, 0, H);
   grad.addColorStop(0, hexA(lava, 0.85));
