@@ -1,22 +1,16 @@
-// Pre-designed room templates.
-// Each is a small grid: 1 = wall, 0 = open, 2 = forced open (door anchor).
-// w/h define footprint. When placed, rotates/flips randomly.
 const CHUNKS = [
-  // Wide open
   { w:4,h:4, cells:[
     [0,0,0,0],
     [0,0,0,0],
     [0,0,0,0],
     [0,0,0,0]
   ]},
-  // Center pillar
   { w:4,h:4, cells:[
     [0,0,0,0],
     [0,1,1,0],
     [0,1,1,0],
     [0,0,0,0]
   ]},
-  // Cross
   { w:5,h:5, cells:[
     [0,0,1,0,0],
     [0,0,1,0,0],
@@ -24,42 +18,36 @@ const CHUNKS = [
     [0,0,1,0,0],
     [0,0,1,0,0]
   ]},
-  // Diagonal
   { w:4,h:4, cells:[
     [0,0,0,1],
     [0,0,1,1],
     [0,1,1,0],
     [1,1,0,0]
   ]},
-  // Corners
   { w:4,h:4, cells:[
     [1,0,0,1],
     [0,0,0,0],
     [0,0,0,0],
     [1,0,0,1]
   ]},
-  // Two pillars
   { w:5,h:4, cells:[
     [0,0,0,0,0],
     [0,1,0,1,0],
     [0,1,0,1,0],
     [0,0,0,0,0]
   ]},
-  // Zigzag
   { w:5,h:4, cells:[
     [0,0,0,0,0],
     [0,1,1,1,0],
     [0,0,0,0,0],
     [0,1,1,1,0]
   ]},
-  // Hallway with pockets
   { w:5,h:4, cells:[
     [0,0,0,0,0],
     [0,1,0,1,0],
     [0,1,0,1,0],
     [0,0,0,0,0]
   ]},
-  // Small rooms
   { w:5,h:5, cells:[
     [0,0,0,0,0],
     [0,1,1,0,1],
@@ -67,7 +55,6 @@ const CHUNKS = [
     [0,0,0,0,0],
     [1,0,1,1,0]
   ]},
-  // Sparse
   { w:5,h:5, cells:[
     [0,0,0,0,0],
     [0,0,1,0,0],
@@ -77,7 +64,6 @@ const CHUNKS = [
   ]}
 ];
 
-// Random transform (rotate 0-3 times, maybe flip)
 function transformChunk(chunk) {
   let cells = chunk.cells.map(r => r.slice());
   let w = chunk.w, h = chunk.h;
@@ -98,7 +84,6 @@ function transformChunk(chunk) {
   return { w, h, cells };
 }
 
-// Fill an entire grid with chunk patterns
 function fillWithChunks(cols, rows) {
   const grid = [];
   for (let r = 0; r < rows; r++) {
@@ -107,7 +92,6 @@ function fillWithChunks(cols, rows) {
   }
 
   const placed = [];
-  const targetCoverage = 0.85;
   let attempts = 0;
   const maxAttempts = 200;
 
@@ -120,7 +104,6 @@ function fillWithChunks(cols, rows) {
     const r = 1 + Math.floor(Math.random() * (maxR - 2));
     const c = 1 + Math.floor(Math.random() * (maxC - 2));
 
-    // overlap check — only place on all-open cells to avoid clumping walls
     let ok = true;
     for (let dr = 0; dr < t.h && ok; dr++) {
       for (let dc = 0; dc < t.w && ok; dc++) {
@@ -137,7 +120,6 @@ function fillWithChunks(cols, rows) {
     placed.push({ r, c, w: t.w, h: t.h });
   }
 
-  // Border walls
   for (let r = 0; r < rows; r++) {
     grid[r][0] = 1;
     grid[r][cols - 1] = 1;
@@ -150,7 +132,6 @@ function fillWithChunks(cols, rows) {
   return grid;
 }
 
-// Flood-fill reachability check: returns set of "r,c" reachable from (sr,sc)
 function reachableFrom(grid, sr, sc) {
   const seen = new Set();
   const q = [[sr, sc]];
