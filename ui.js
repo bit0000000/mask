@@ -1,11 +1,22 @@
 const scoreEl = document.getElementById('score');
 const coinsEl = document.getElementById('coins');
-const levelEl = document.getElementById('level');
+const levelEl = document.getElementById('level') || document.getElementById('lvlDisplay');
+const chainEl = document.getElementById('chainDisplay');
+const lvlDisplayEl = document.getElementById('lvlDisplay');
 
 function updateHUD() {
   scoreEl.textContent = S.score;
   coinsEl.textContent = S.coins;
-  levelEl.textContent = S.level;
+  if (S.mode === 'arcade') {
+    lvlDisplayEl.textContent = '↑ ' + S.arcadeHeight;
+  } else {
+    lvlDisplayEl.textContent = (S.boss ? 'BOSS ' : 'LV ') + S.level;
+  }
+  if (S.chain >= 3) {
+    chainEl.textContent = '×' + S.chain;
+  } else {
+    chainEl.textContent = '';
+  }
 }
 
 const toastEl = document.getElementById('toast');
@@ -47,10 +58,7 @@ function openShop() {
     row.className = 'shop-row';
     row.innerHTML = `
       <div class="icon">${it.icon}</div>
-      <div class="info">
-        <b>${it.name}</b>
-        <span>${it.desc}</span>
-      </div>
+      <div class="info"><b>${it.name}</b><span>${it.desc}</span></div>
       <button class="btn small">◈ ${it.cost}</button>
     `;
     grid.appendChild(row);
@@ -75,10 +83,7 @@ function openShop() {
     row.style.borderColor = 'var(--coin)';
     row.innerHTML = `
       <div class="icon">🎭</div>
-      <div class="info">
-        <b>Unlock ${m.name} mask</b>
-        <span>Permanent unlock</span>
-      </div>
+      <div class="info"><b>Unlock ${m.name} mask</b><span>Permanent unlock</span></div>
       <button class="btn small">◈ ${m.cost}</button>
     `;
     grid.appendChild(row);
@@ -101,8 +106,10 @@ function renderMaskMenu() {
   const grid = document.getElementById('maskGrid');
   grid.innerHTML = '';
   document.getElementById('menuCoins').textContent = S.totalCoins;
-  document.getElementById('menuBest').textContent =
-    'BEST ' + S.best.score + ' · LEVEL ' + S.best.level;
+  const bestText = S.mode === 'arcade'
+    ? 'ARCADE BEST ↑' + (S.best.arcade || 0)
+    : 'BEST ' + S.best.score + ' · LEVEL ' + S.best.level;
+  document.getElementById('menuBest').textContent = bestText;
 
   MASK_ORDER.forEach(id => {
     const m = MASKS[id];
@@ -126,29 +133,35 @@ function renderMaskMenu() {
   });
 
   const pracBtn = document.getElementById('practiceBtn');
-  if (S.best.level > 1) {
+  if (S.mode === 'stage' && S.best.level > 1) {
     pracBtn.style.display = '';
     pracBtn.textContent = 'PRACTICE FROM LEVEL ' + S.best.level;
   } else {
     pracBtn.style.display = 'none';
   }
+
+  // mode buttons
+  document.getElementById('modeStage').classList.toggle('active', S.mode === 'stage');
+  document.getElementById('modeArcade').classList.toggle('active', S.mode === 'arcade');
 }
 
-// Fix #11: rename 'dots' to 'score' for accuracy
 function renderDeathStats() {
   const el = document.getElementById('deadStats');
   if (!S.deathStats) { el.innerHTML = ''; return; }
   const d = S.deathStats;
-  const timeStr = Math.floor(d.time / 60) + ':' + String(Math.floor(d.time % 60)).padStart(2, '0');
+  const timeStr = Math.floor(d.time/60) + ':' + String(Math.floor(d.time%60)).padStart(2,'0');
+  const heightRow = S.mode === 'arcade'
+    ? `<div class="k">Height</div><div class="v">${d.height || 0}</div>`
+    : '';
   el.innerHTML = `
+    ${heightRow}
     <div class="k">Score</div><div class="v">${d.score}</div>
     <div class="k">Coins earned</div><div class="v">${d.coins}</div>
     <div class="k">Time played</div><div class="v">${timeStr}</div>
-    <div class="k">Best score</div><div class="v">${S.best.score}</div>
+    <div class="k">Best</div><div class="v">${S.mode === 'arcade' ? '↑' + (S.best.arcade || 0) : S.best.score}</div>
   `;
 }
 
-// Fix #3: wire once at init, use onchange so no duplicate listeners
 let settingsWired = false;
 function wireSettings() {
   if (settingsWired) return;
