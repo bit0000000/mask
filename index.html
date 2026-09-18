@@ -6,87 +6,16 @@
 <title>Tomb of the Mask</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+// Fix #5: paint correct theme before CSS loads to prevent white flash
+(function(){
+  try {
+    var s = localStorage.getItem('mask-theme');
+    var dark = s ? s === 'dark' : true;
+    document.documentElement.style.background = dark ? '#0a1226' : '#f5f7fb';
+    document.documentElement.style.color = dark ? '#e2e8f7' : '#0f1e3d';
+  } catch(e){}
+})();
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="app">
-  <div class="hud">
-    <div class="stat score">SCORE <span id="score">0</span></div>
-    <div class="stat coins">◈ <span id="coins">0</span></div>
-    <div class="lvl">LV <span id="level">1</span></div>
-    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
-    <button class="icon-btn" id="themeBtn" title="Theme">☾</button>
-    <button class="icon-btn" id="pauseBtn" title="Pause">❚❚</button>
-  </div>
-  <div class="game-wrap">
-    <canvas id="game"></canvas>
-    <div class="toast" id="toast"></div>
-
-    <div class="overlay show" id="menuOverlay">
-      <h2>Tomb of the Mask</h2>
-      <p class="best-line" id="menuBest">BEST 0 · LEVEL 1</p>
-      <p>Pick a mask.</p>
-      <div class="mask-grid" id="maskGrid"></div>
-      <button class="btn" id="playBtn">START</button>
-      <button class="btn ghost small" id="practiceBtn" style="display:none"></button>
-      <p style="font-size:.68rem;margin-top:6px">Coins: <span id="menuCoins">0</span></p>
-    </div>
-
-    <div class="overlay" id="shopOverlay">
-      <h2>Level <span id="shopLevel">1</span> cleared</h2>
-      <p>Buy supplies with <span style="color:var(--coin)">◈ coins</span>.</p>
-      <div class="shop-grid" id="shopGrid"></div>
-      <button class="btn" id="nextLevelBtn" style="margin-top:4px">NEXT LEVEL</button>
-    </div>
-
-    <div class="overlay" id="deadOverlay">
-      <h2 id="deadTitle">You died</h2>
-      <p id="deadMsg">Score: 0</p>
-      <div class="stats" id="deadStats"></div>
-      <button class="btn" id="retryBtn">TRY AGAIN</button>
-      <button class="btn ghost small" id="menuBtn">MENU</button>
-    </div>
-
-    <div class="overlay" id="pauseOverlay">
-      <h2>Paused</h2>
-      <p id="pauseInfo"></p>
-      <button class="btn" id="resumeBtn">RESUME</button>
-      <button class="btn ghost small" id="quitBtn">QUIT TO MENU</button>
-    </div>
-
-    <div class="overlay" id="settingsOverlay">
-      <h2>Settings</h2>
-      <div class="settings-grid">
-        <label class="setting-row"><span>Sound effects</span><input type="checkbox" id="setSound"></label>
-        <label class="setting-row"><span>Vibration</span><input type="checkbox" id="setHaptics"></label>
-        <label class="setting-row"><span>Player trail</span><input type="checkbox" id="setTrail"></label>
-        <label class="setting-row"><span>Reduced motion</span><input type="checkbox" id="setMotion"></label>
-      </div>
-      <button class="btn" id="settingsClose">DONE</button>
-      <button class="btn ghost small" id="resetProgress">RESET PROGRESS</button>
-    </div>
-  </div>
-  <div class="legend">
-    <span><i style="background:var(--coin)"></i>Coin</span>
-    <span><i style="background:var(--accent)"></i>Dot</span>
-    <span><i style="background:var(--danger)"></i>Spike</span>
-    <span><i style="background:var(--bat)"></i>Bat</span>
-    <span><i style="background:var(--puffer)"></i>Puffer</span>
-    <span><i style="background:var(--dart)"></i>Dart</span>
-  </div>
-  <div class="hint">SWIPE · ARROWS · WASD</div>
-</div>
-
-<script src="config.js"></script>
-<script src="masks.js"></script>
-<script src="state.js"></script>
-<script src="audio.js"></script>
-<script src="effects.js"></script>
-<script src="levels.js"></script>
-<script src="hazards.js"></script>
-<script src="render.js"></script>
-<script src="ui.js"></script>
-<script src="input.js"></script>
-<script src="game.js"></script>
-</body>
-</html>
