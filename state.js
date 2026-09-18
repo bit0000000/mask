@@ -1,13 +1,16 @@
 const S = {
   screen: 'menu',
   previousScreen: null,
+  mode: 'stage',                // 'stage' | 'arcade'
+
   level: 1,
   score: 0,
   coins: 0,
   totalCoins: 0,
+
   mask: localStorage.getItem('mask-skin') || 'classic',
   owned: JSON.parse(localStorage.getItem('mask-owned') || '["classic"]'),
-  best: JSON.parse(localStorage.getItem('mask-best') || '{"score":0,"level":1}'),
+  best: JSON.parse(localStorage.getItem('mask-best') || '{"score":0,"level":1,"arcade":0}'),
   settings: (() => {
     const d = { sound: true, haptics: true, reducedMotion: false, trail: true };
     try {
@@ -27,6 +30,27 @@ const S = {
   hazards: [],
   darts: [],
 
+  // lava
+  lavaActive: false,
+  lavaLevel: 0,
+  lavaRise: 0,
+  lavaWave: 0,
+
+  // combo / chain
+  chain: 0,
+  chainBest: 0,
+
+  // boss
+  boss: false,
+
+  // arcade
+  arcadeHeight: 0,
+  arcadeLavaTimer: 0,
+
+  // transition
+  transition: 0,
+  transitionText: '',
+
   particles: [],
   trail: [],
   popups: [],
@@ -38,7 +62,7 @@ const S = {
   startTime: 0,
   deathStats: null,
 
-  player: { r: 0, c: 0, px: 0, py: 0, scale: 1 },
+  player: { r: 0, c: 0, px: 0, py: 0, scale: 1, alive: true, shatter: null },
   running: false,
   dead: false,
   moveLock: 0,
@@ -64,15 +88,9 @@ function resize() {
     S.player.px = offX + (S.player.c + 0.5) * CELL;
     S.player.py = offY + (S.player.r + 0.5) * CELL;
   }
-  // Fix #7: guard against resize firing before render.js has loaded
   if (typeof draw === 'function') draw();
 }
 window.addEventListener('resize', resize);
 
-function saveSettings() {
-  localStorage.setItem('mask-settings', JSON.stringify(S.settings));
-}
-
-function saveBest() {
-  localStorage.setItem('mask-best', JSON.stringify(S.best));
-}
+function saveSettings() { localStorage.setItem('mask-settings', JSON.stringify(S.settings)); }
+function saveBest() { localStorage.setItem('mask-best', JSON.stringify(S.best)); }
