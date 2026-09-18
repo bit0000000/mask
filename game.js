@@ -13,6 +13,7 @@ function startRun(practiceLevel) {
   if (practiceLevel && practiceLevel > 1) S.levelIntroT = 1.8;
   S.running = true;
   showOverlay(null);
+  if (S.level === 1 && !practiceLevel) maybeShowTutorial();
 }
 
 function levelClear() {
@@ -36,19 +37,20 @@ function die() {
   S.dead = true;
   S.player.alive = false;
 
-  // shatter effect
-  const pColor = maskColor(S.mask);
-  const shards = [];
-  for (let i = 0; i < 24; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const sp = 1 + Math.random() * 3;
-    shards.push({
-      x: S.player.px, y: S.player.py,
-      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-      life: 1
-    });
+  // shatter effect — skipped under reduced motion
+  if (!S.settings.reducedMotion) {
+    const shards = [];
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 1 + Math.random() * 3;
+      shards.push({
+        x: S.player.px, y: S.player.py,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: 1
+      });
+    }
+    S.player.shatter = shards;
   }
-  S.player.shatter = shards;
 
   const elapsed = (performance.now() - S.startTime) / 1000;
   S.deathStats = { score: S.score, coins: S.coins, time: elapsed };
@@ -148,13 +150,11 @@ function move(dr, dc) {
     if (S.coinsSet.has(k)) { S.coinsSet.delete(k); gotCoins++; }
   }
 
-  // Chain counter: increments on each dot collected in this slide
   if (got >= 3) {
     S.chain++;
     if (S.chain > S.chainBest) S.chainBest = S.chain;
     popText('×' + got + (S.chain > 1 ? ' · STREAK ' + S.chain : ''), r, c, cv('--danger'));
   } else if (got === 0 && path.length < 2) {
-    // short bump without collect resets streak
     S.chain = 0;
   }
 
@@ -169,10 +169,9 @@ function move(dr, dc) {
   S.coins += gotCoins * coinMult;
   S.totalCoins += gotCoins * coinMult;
 
-  // Magnet: if active, pull coins from nearby cells
   if (S.magnetT > 0) {
-    for (let rr = Math.max(0, r-2); rr <= Math.min(ROWS-1, r+2); rr++) {
-      for (let cc = Math.max(0, c-2); cc <= Math.min(COLS-1, c+2); cc++) {
+    for (let rr = Math.max(0, r - 2); rr <= Math.min(ROWS - 1, r + 2); rr++) {
+      for (let cc = Math.max(0, c - 2); cc <= Math.min(COLS - 1, c + 2); cc++) {
         const k = rr + ',' + cc;
         if (S.coinsSet.has(k)) {
           S.coinsSet.delete(k);
@@ -190,11 +189,14 @@ function move(dr, dc) {
   if (got > 0) {
     spawnBurst(r, c, cv('--accent'), 6 + got);
     sfx.tick();
-    vibrate(8);
+    if (got >= 5)      vibrate([15, 20, 25, 20, 15]);
+    else if (got >= 3) vibrate([12, 18, 12]);
+    else               vibrate(8);
   }
   if (gotCoins > 0) {
     spawnBurst(r, c, cv('--coin'), 8);
     sfx.coin();
+    vibrate([10, 12, 10]);
     toast('+' + (gotCoins * coinMult) + ' ◈');
   }
 
@@ -218,7 +220,6 @@ function update(dt) {
   updateTrail(dt);
   updatePopups(dt);
 
-  // shatter update
   if (S.player.shatter) {
     for (const p of S.player.shatter) {
       p.x += p.vx;
@@ -267,7 +268,6 @@ themeBtn.addEventListener('click', () => {
   if (S.grid.length) draw();
 });
 
-// Buttons
 document.getElementById('playBtn').addEventListener('click', () => {
   if (S.mode === 'arcade') startArcade();
   else startRun(1);
@@ -293,7 +293,6 @@ document.getElementById('quitBtn').addEventListener('click', () => {
   showOverlay('menu');
 });
 
-// Mode buttons
 document.getElementById('modeStage').addEventListener('click', () => {
   S.mode = 'stage';
   renderMaskMenu();
@@ -303,7 +302,6 @@ document.getElementById('modeArcade').addEventListener('click', () => {
   renderMaskMenu();
 });
 
-// Settings
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsClose = document.getElementById('settingsClose');
 const resetProgress = document.getElementById('resetProgress');
@@ -348,16 +346,23 @@ resetProgress.addEventListener('click', () => {
   toast('Progress reset');
 });
 
-// Init
-applyTheme();
-resize();
-genLevel();
-S.running = false;
-renderMaskMenu();
-requestAnimationFrame(loop);
+// Pause when the tab is hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && S.running && !S.dead) {
+    pauseGame();
+  }
+});
+
 // ---------- SERVICE WORKER ----------
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+applyTheme();
+resize();
+genLevel();
+S.running = false;
+renderMaskMenu();
+requestAnimationFrame(loop);
