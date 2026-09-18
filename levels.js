@@ -3,6 +3,8 @@ function genLevel() {
   const isBoss = (S.mode === 'stage') && (lvl % 10 === 0);
   S.boss = isBoss;
 
+  S.worldRows = WORLD_ROWS;
+
   S.grid = [];
   S.hazards = [];
   S.darts = [];
@@ -16,6 +18,11 @@ function genLevel() {
   S.chain = 0;
   S.levelIntroT = 0.9;
   S.transition = 0;
+  S.camY = 0;
+
+  S.lavaActive = false;
+  S.lavaLevel = S.worldRows + 1;
+  S.lavaRise = 0;
 
   let attempts = 0;
   let open = [];
@@ -23,19 +30,18 @@ function genLevel() {
 
   while (attempts < 15) {
     attempts++;
-    S.grid = fillWithChunks(COLS, ROWS);
+    S.grid = fillWithChunks(COLS, S.worldRows);
+
     let found = null;
-    for (let r = 1; r < ROWS - 1 && !found; r++) {
-      for (let c = 1; c < COLS - 1; c++) {
-        if (S.grid[r][c] === 0 && r >= 2 && r <= ROWS - 3 && c >= 2 && c <= COLS - 3) {
-          found = [r, c]; break;
-        }
+    for (let r = S.worldRows - 3; r >= 2 && !found; r--) {
+      for (let c = 2; c < COLS - 2; c++) {
+        if (S.grid[r][c] === 0) { found = [r, c]; break; }
       }
     }
     if (!found) continue;
 
     const reach = reachableFrom(S.grid, found[0], found[1]);
-    if (reach.size < 40) continue;
+    if (reach.size < 90) continue;
 
     start = found;
     open = [];
@@ -48,16 +54,16 @@ function genLevel() {
 
   if (!start) {
     S.grid = [];
-    for (let r = 0; r < ROWS; r++) {
+    for (let r = 0; r < S.worldRows; r++) {
       S.grid[r] = [];
       for (let c = 0; c < COLS; c++) {
-        S.grid[r][c] = (r === 0 || r === ROWS-1 || c === 0 || c === COLS-1) ? 1 : 0;
+        S.grid[r][c] = (r === 0 || r === S.worldRows - 1 || c === 0 || c === COLS - 1) ? 1 : 0;
       }
     }
-    start = [Math.floor(ROWS/2), Math.floor(COLS/2)];
+    start = [S.worldRows - 3, Math.floor(COLS / 2)];
     open = [];
-    for (let r = 1; r < ROWS-1; r++)
-      for (let c = 1; c < COLS-1; c++) open.push([r,c]);
+    for (let r = 1; r < S.worldRows - 1; r++)
+      for (let c = 1; c < COLS - 1; c++) open.push([r, c]);
   }
 
   for (let i = open.length - 1; i > 0; i--) {
@@ -67,110 +73,127 @@ function genLevel() {
 
   const safe = new Set();
   for (let c = 0; c < COLS; c++) safe.add(start[0] + ',' + c);
-  for (let r = 0; r < ROWS; r++) safe.add(r + ',' + start[1]);
+  for (let r = 0; r < S.worldRows; r++) safe.add(r + ',' + start[1]);
 
-  function pickOpen() {
+  const placed = new Set();
+  const tooClose = (r, c) => {
+    for (let dr = -1; dr <= 1; dr++)
+      for (let dc = -1; dc <= 1; dc++)
+        if (placed.has((r + dr) + ',' + (c + dc))) return true;
+    return false;
+  };
+
+  function pickOpen(enforceSpacing) {
     for (let i = open.length - 1; i >= 0; i--) {
       const [r, c] = open[i];
       if (safe.has(r + ',' + c)) continue;
       if (S.grid[r][c] !== 0) continue;
+      if (enforceSpacing && tooClose(r, c)) continue;
       open.splice(i, 1);
+      placed.add(r + ',' + c);
       return [r, c];
     }
     return null;
   }
 
-  const baseLvl = Math.min(lvl, 30);
-  const spikeCount  = Math.min(2 + baseLvl * 2, Math.floor(open.length * 0.28));
-  const hiddenCount = lvl >= 3 ? Math.min(1 + Math.floor(lvl / 3), 5) : 0;
-  const batCount    = lvl >= 2 ? Math.min(1 + Math.floor(lvl / 4), 4) : 0;
-  const dartCount   = lvl >= 4 ? Math.min(1 + Math.floor(lvl / 6), 3) : 0;
-  const pufferCount = lvl >= 5 ? Math.min(1 + Math.floor(lvl / 8), 2) : 0;
-  const sawCount    = lvl >= 6 ? Math.min(1 + Math.floor(lvl / 10), 2) : 0;
-  const snakeCount  = lvl >= 8 ? Math.min(1 + Math.floor(lvl / 12), 2) : 0;
+  const spikeCount  = Math.min(3 + lvl, Math.floor(open.length * 0.10));
+  const hiddenCount = lvl >= 5  ? Math.min(1 + Math.floor((lvl - 5) / 4), 3)   : 0;
+  const batCount    = lvl >= 4  ? Math.min(1 + Math.floor((lvl - 4) / 5), 3)   : 0;
+  const dartCount   = lvl >= 7  ? Math.min(1 + Math.floor((lvl - 7) / 7), 2)   : 0;
+  const pufferCount = lvl >= 9  ? Math.min(1 + Math.floor((lvl - 9) / 10), 2)  : 0;
+  const sawCount    = lvl >= 12 ? Math.min(1 + Math.floor((lvl - 12) / 12), 2) : 0;
+  const snakeCount  = lvl >= 15 ? Math.min(1 + Math.floor((lvl - 15) / 15), 1) : 0;
 
   for (let i = 0; i < spikeCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(true);
+    if (!p) break;
     S.hazards.push({ type: 'spike', r: p[0], c: p[1] });
   }
   for (let i = 0; i < hiddenCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(true);
+    if (!p) break;
     S.hazards.push({ type: 'hidden', r: p[0], c: p[1], reveal: 0 });
   }
   for (let i = 0; i < batCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(false);
+    if (!p) break;
     const horiz = Math.random() < 0.5;
     S.hazards.push({
       type: 'bat', r: p[0], c: p[1],
       dr: horiz ? 0 : 1, dc: horiz ? 1 : 0,
-      dir: 1, speed: 1.6 + lvl * 0.04
+      dir: 1, speed: 1.6 + lvl * 0.03
     });
   }
   for (let i = 0; i < dartCount; i++) {
-    const p = pickOpen(); if (!p) break;
-    const dirs = [[-1,0],[1,0],[0,-1],[0,1]].filter(([dr,dc]) => {
-      const nr = p[0]+dr, nc = p[1]+dc;
-      return nr>=0 && nr<ROWS && nc>=0 && nc<COLS && S.grid[nr][nc]===0;
+    const p = pickOpen(false);
+    if (!p) break;
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]].filter(([dr, dc]) => {
+      const nr = p[0] + dr, nc = p[1] + dc;
+      return nr >= 0 && nr < S.worldRows && nc >= 0 && nc < COLS && S.grid[nr][nc] === 0;
     });
     if (!dirs.length) continue;
     const [dr, dc] = dirs[Math.floor(Math.random() * dirs.length)];
-    S.hazards.push({ type: 'dart', r: p[0], c: p[1], dr, dc, t: 0, interval: 1.6 });
+    S.hazards.push({ type: 'dart', r: p[0], c: p[1], dr, dc, t: 0, interval: 2.0 });
   }
   for (let i = 0; i < pufferCount; i++) {
-    const p = pickOpen(); if (!p) break;
-    if (p[0] < 1 || p[0] > ROWS-2 || p[1] < 1 || p[1] > COLS-2) continue;
-    S.hazards.push({ type: 'puffer', r: p[0], c: p[1], t: Math.random()*2, period: 2.4 });
+    const p = pickOpen(false);
+    if (!p) break;
+    if (p[0] < 1 || p[0] > S.worldRows - 2 || p[1] < 1 || p[1] > COLS - 2) continue;
+    S.hazards.push({ type: 'puffer', r: p[0], c: p[1], t: Math.random() * 2, period: 2.4 });
   }
   for (let i = 0; i < sawCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(false);
+    if (!p) break;
     const horiz = Math.random() < 0.5;
     S.hazards.push({
       type: 'saw', r: p[0], c: p[1],
       dr: horiz ? 0 : 1, dc: horiz ? 1 : 0,
-      dir: 1, speed: 3.2, spin: 0
+      dir: 1, speed: 3.0, spin: 0
     });
   }
   for (let i = 0; i < snakeCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(false);
+    if (!p) break;
     S.hazards.push({
       type: 'snake', r: p[0], c: p[1],
       state: 'idle', progress: 0, dir: null
     });
   }
 
-  const dotChance = Math.max(0.40, 0.62 - lvl * 0.012);
-  for (const [r, c] of open) {
-    if (S.grid[r][c] === 0 && Math.random() < dotChance) S.dots.add(r + ',' + c);
+  const dotTarget = 14 + Math.floor(lvl * 0.5);
+  for (let i = 0; i < dotTarget; i++) {
+    const p = pickOpen(false);
+    if (!p) break;
+    S.dots.add(p[0] + ',' + p[1]);
   }
-  if (S.dots.size < 4) {
+  if (S.dots.size < 6) {
     for (const [r, c] of open) {
       if (!S.grid[r][c]) S.dots.add(r + ',' + c);
-      if (S.dots.size >= 4) break;
+      if (S.dots.size >= 6) break;
     }
   }
 
-  const coinCount = 2 + Math.floor(Math.random() * 3) + Math.floor(lvl / 4);
+  const coinCount = 3 + Math.floor(Math.random() * 3) + Math.floor(lvl / 4);
   for (let i = 0; i < coinCount; i++) {
-    const p = pickOpen(); if (!p) break;
+    const p = pickOpen(false);
+    if (!p) break;
     S.coinsSet.add(p[0] + ',' + p[1]);
   }
-
   if (isBoss) {
-    for (let i = 0; i < 8; i++) {
-      const p = pickOpen(); if (!p) break;
+    for (let i = 0; i < 10; i++) {
+      const p = pickOpen(false);
+      if (!p) break;
       S.coinsSet.add(p[0] + ',' + p[1]);
     }
-    initLava(ROWS + 0.5, 0.35);
-  } else {
-    S.lavaActive = false;
-    S.lavaLevel = ROWS + 1;
-    S.lavaRise = 0;
   }
 
   S.player.r = start[0];
   S.player.c = start[1];
   S.player.px = offX + (start[1] + 0.5) * CELL;
-  S.player.py = offY + (start[0] + 0.5) * CELL;
+  const startWorldY = (start[0] + 0.5) * CELL;
+  const maxCamY = Math.max(0, S.worldRows * CELL - H);
+  S.camY = Math.max(0, Math.min(maxCamY, startWorldY - H * 0.65));
+  S.player.py = startWorldY - S.camY + offY;
   S.player.scale = 1;
   S.player.alive = true;
   S.player.shatter = null;
